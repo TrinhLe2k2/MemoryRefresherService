@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/Location/">
+    <Project Path="Location.API/Location.API.csproj" />
+    <Project Path="Location.Common/Location.Common.csproj" />
+    <Project Path="Location.Infrastructures/Location.Infrastructures.csproj" />
+    <Project Path="Location.Models/Location.Models.csproj" />
+    <Project Path="Location.Repositories/Location.Repositories.csproj" />
+    <Project Path="Location.Services/Location.Services.csproj" />
+  </Folder>
+</Solution>

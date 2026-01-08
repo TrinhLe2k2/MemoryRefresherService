@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Location.Common\Location.Common.csproj" />
+    <ProjectReference Include="..\Location.Infrastructures\Location.Infrastructures.csproj" />
+    <ProjectReference Include="..\Location.Models\Location.Models.csproj" />
+    <ProjectReference Include="..\Location.Repositories\Location.Repositories.csproj" />
+    <ProjectReference Include="..\Location.Services\Location.Services.csproj" />
+  </ItemGroup>
+
+</Project>
