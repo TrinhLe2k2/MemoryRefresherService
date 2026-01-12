@@ -1,28 +1,70 @@
-# This workflow will build a .NET project
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-net
-
-name: .NET
+name: Deploy MemoryRefresherService to IIS (Self-hosted)
 
 on:
   push:
-    branches: [ "master" ]
-  pull_request:
-    branches: [ "master" ]
+    branches: [ master ]
 
 jobs:
-  build:
-
-    runs-on: ubuntu-latest
+  deploy:
+    runs-on: self-hosted
+    timeout-minutes: 10
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 8.0.x
-    - name: Restore dependencies
-      run: dotnet restore
-    - name: Build
-      run: dotnet build --no-restore
-    - name: Test
-      run: dotnet test --no-build --verbosity normal
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Show runner info
+        shell: powershell
+        run: |
+          Write-Host "Running on:"
+          hostname
+          whoami
+
+      - name: Restore dependencies
+        shell: powershell
+        run: dotnet restore ./MemoryRefresherService/MemoryRefresherService.csproj
+
+      - name: Build application
+        shell: powershell
+        run: dotnet build ./MemoryRefresherService/MemoryRefresherService.csproj -c Release --no-restore
+
+      - name: Publish application
+        shell: powershell
+        run: |
+          dotnet publish ./MemoryRefresherService/MemoryRefresherService.csproj `
+            -c Release `
+            -o C:\deploy\MemoryRefresherService
+
+      - name: Stop IIS
+        shell: powershell
+        run: |
+          Write-Host "Stopping IIS..."
+          iisreset /stop
+
+      - name: Deploy to IIS folder
+        shell: powershell
+        run: |
+          $source = "C:\deploy\MemoryRefresherService"
+          $destination = "C:\inetpub\wwwroot\MemoryRefresher\Service"
+
+          if (!(Test-Path $destination)) {
+            New-Item -ItemType Directory -Path $destination
+          }
+
+          Write-Host "Deploying files..."
+          Copy-Item "$source\*" $destination -Recurse -Force
+
+      - name: Start IIS
+        shell: powershell
+        run: |
+          Write-Host "Starting IIS..."
+          iisreset /start
+
+      - name: Health check
+        shell: powershell
+        run: |
+          Start-Sleep -Seconds 3
+          Invoke-WebRequest http://localhost -UseBasicParsing
+
+      - name: Deploy success
+        run: echo "✅ MemoryRefresherService deployed successfully to IIS"
