@@ -78,7 +78,7 @@ namespace Location.API.Controllers
             }
         }
 
-        [HttpGet]
+        [HttpGet("list-provinces")]
         public async Task<IActionResult> GetList([FromQuery] string? keyword)
         {
             try
