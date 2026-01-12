@@ -1,4 +1,4 @@
-name: Deploy MemoryRefreshService to IIS (Self-hosted)
+name: Deploy MemoryRefresherService to IIS (Self-hosted)
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
 jobs:
   deploy:
     runs-on: self-hosted
-    timeout-minutes: 15
+    timeout-minutes: 10
 
     steps:
       - name: Checkout source code
@@ -19,88 +19,52 @@ jobs:
           Write-Host "Running on:"
           hostname
           whoami
-          dotnet --info
-
-      # ==== CONFIG (chỉnh 3 biến này cho đúng) ====
-      - name: Set deploy variables
-        shell: powershell
-        run: |
-          "PROJECT_PATH=./MemoryRefreshService/MemoryRefreshService.csproj" | Out-File -FilePath $env:GITHUB_ENV -Append
-          "PUBLISH_DIR=C:\deploy\MemoryRefreshService" | Out-File -FilePath $env:GITHUB_ENV -Append
-          "IIS_DIR=C:\inetpub\wwwroot\MemoryRefresher\Service" | Out-File -FilePath $env:GITHUB_ENV -Append
-          "IIS_SITE=MemoryRefresher" | Out-File -FilePath $env:GITHUB_ENV -Append
-          "IIS_APPPOOL=MemoryRefreshService" | Out-File -FilePath $env:GITHUB_ENV -Append
-      # ===========================================
 
       - name: Restore dependencies
         shell: powershell
-        run: dotnet restore "${{ env.PROJECT_PATH }}"
+        run: dotnet restore ./MemoryRefresherService/MemoryRefresherService.csproj
 
       - name: Build application
         shell: powershell
-        run: dotnet build "${{ env.PROJECT_PATH }}" -c Release --no-restore
+        run: dotnet build ./MemoryRefresherService/MemoryRefresherService.csproj -c Release --no-restore
 
       - name: Publish application
         shell: powershell
         run: |
-          if (Test-Path "${{ env.PUBLISH_DIR }}") { Remove-Item "${{ env.PUBLISH_DIR }}" -Recurse -Force }
-          New-Item -ItemType Directory -Path "${{ env.PUBLISH_DIR }}" | Out-Null
-
-          dotnet publish "${{ env.PROJECT_PATH }}" `
+          dotnet publish ./MemoryRefresherService/MemoryRefresherService.csproj `
             -c Release `
-            -o "${{ env.PUBLISH_DIR }}" `
-            --no-build
+            -o C:\deploy\MemoryRefresherService
 
-      - name: Stop IIS site/app pool (graceful)
+      - name: Stop IIS
         shell: powershell
         run: |
-          Import-Module WebAdministration
-          Write-Host "Stopping App Pool: ${{ env.IIS_APPPOOL }}"
-          if (Test-Path "IIS:\AppPools\${{ env.IIS_APPPOOL }}") {
-            Stop-WebAppPool -Name "${{ env.IIS_APPPOOL }}"
-          }
-
-          Write-Host "Stopping Site: ${{ env.IIS_SITE }}"
-          if (Test-Path "IIS:\Sites\${{ env.IIS_SITE }}") {
-            Stop-Website -Name "${{ env.IIS_SITE }}"
-          }
+          Write-Host "Stopping IIS..."
+          iisreset /stop
 
       - name: Deploy to IIS folder
         shell: powershell
         run: |
-          $source = "${{ env.PUBLISH_DIR }}"
-          $destination = "${{ env.IIS_DIR }}"
+          $source = "C:\deploy\MemoryRefresherService"
+          $destination = "C:\inetpub\wwwroot\MemoryRefresher\Service"
 
           if (!(Test-Path $destination)) {
-            New-Item -ItemType Directory -Path $destination | Out-Null
+            New-Item -ItemType Directory -Path $destination
           }
 
-          Write-Host "Deploying from $source to $destination ..."
-          # Xóa file cũ để tránh file rác
-          Get-ChildItem -Path $destination -Force | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
-
+          Write-Host "Deploying files..."
           Copy-Item "$source\*" $destination -Recurse -Force
 
-      - name: Start IIS site/app pool
+      - name: Start IIS
         shell: powershell
         run: |
-          Import-Module WebAdministration
-          Write-Host "Starting Site: ${{ env.IIS_SITE }}"
-          if (Test-Path "IIS:\Sites\${{ env.IIS_SITE }}") {
-            Start-Website -Name "${{ env.IIS_SITE }}"
-          }
-
-          Write-Host "Starting App Pool: ${{ env.IIS_APPPOOL }}"
-          if (Test-Path "IIS:\AppPools\${{ env.IIS_APPPOOL }}") {
-            Start-WebAppPool -Name "${{ env.IIS_APPPOOL }}"
-          }
+          Write-Host "Starting IIS..."
+          iisreset /start
 
       - name: Health check
         shell: powershell
         run: |
           Start-Sleep -Seconds 3
-          # Đổi URL đúng endpoint của service bạn
-          Invoke-WebRequest "http://localhost/" -UseBasicParsing
+          Invoke-WebRequest http://localhost -UseBasicParsing
 
       - name: Deploy success
-        run: echo "✅ Deployed MemoryRefreshService successfully to IIS"
+        run: echo "✅ MemoryRefresherService deployed successfully to IIS"
