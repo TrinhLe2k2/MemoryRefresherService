@@ -22,16 +22,16 @@ jobs:
 
       - name: Restore dependencies
         shell: powershell
-        run: dotnet restore ./MemoryRefresherService/MemoryRefresherService.csproj
+        run: dotnet restore ./*.sln
 
       - name: Build application
         shell: powershell
-        run: dotnet build ./MemoryRefresherService/MemoryRefresherService.csproj -c Release --no-restore
+        run: dotnet build ./*.sln -c Release --no-restore
 
       - name: Publish application
         shell: powershell
         run: |
-          dotnet publish ./MemoryRefresherService/MemoryRefresherService.csproj `
+          dotnet publish ./*.sln `
             -c Release `
             -o C:\deploy\MemoryRefresherService
 
