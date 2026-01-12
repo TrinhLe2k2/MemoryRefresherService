@@ -15,7 +15,7 @@ namespace Location.Repositories.Implements
         {
         }
 
-        public async Task<int> CreateProvince(InsertProvince model)
+        public async Task<int> CreateProvince(CreateProvince model)
         {
             try
             {

@@ -9,7 +9,7 @@ namespace Location.Repositories.Interfaces
 {
     public interface IProvinceRepository
     {
-        Task<int> CreateProvince(InsertProvince model);
+        Task<int> CreateProvince(CreateProvince model);
         Task<int> UpdateProvince(UpdateProvince model);
         Task<int> DeleteProvince(int id);
         Task<DetailProvince?> GetProvince(int id);

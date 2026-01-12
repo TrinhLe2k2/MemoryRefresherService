@@ -9,7 +9,7 @@ namespace Location.Models
 {
 
     #region Insert
-    public class InsertProvinceRequest : IValidatableObject
+    public class CreateProvinceRequest : IValidatableObject
     {
         public string Name { get; set; } = string.Empty;
         public string Code { get; set; } = string.Empty;
@@ -17,7 +17,7 @@ namespace Location.Models
         public AdministrativeStatus AdministrativeStatus { get; set; }
 
 
-        public InsertProvince ToModel(string user) => new()
+        public CreateProvince ToModel(string user) => new()
         {
             User = user,
             Name = this.Name,
@@ -37,7 +37,7 @@ namespace Location.Models
         }
     }
 
-    public class InsertProvince : InsertProvinceRequest
+    public class CreateProvince : CreateProvinceRequest
     {
         public string User { get; set; } = string.Empty;
     }

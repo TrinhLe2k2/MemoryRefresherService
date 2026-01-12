@@ -17,7 +17,7 @@ namespace Location.API.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create(InsertProvinceRequest req)
+        public async Task<IActionResult> Create(CreateProvinceRequest req)
         {
             try
             {
