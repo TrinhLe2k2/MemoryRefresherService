@@ -30,6 +30,7 @@ namespace Location.API.Controllers
                 return BadRequest(ex.Message);
             }
         }
+        
         [HttpPut]
         public async Task<IActionResult> Update(UpdateProvinceRequest req)
         {
@@ -44,6 +45,7 @@ namespace Location.API.Controllers
                 return BadRequest(ex.Message);
             }
         }
+        
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
@@ -88,6 +90,13 @@ namespace Location.API.Controllers
             {
                 return BadRequest(ex.Message);
             }
+        }
+
+        [HttpGet("get-weather")]
+        public IActionResult GetList()
+        {
+            var weather = new [] { "Sunny", "Cloudy", "Rainy", "Windy", "Stormy"};
+            return Ok(weather);
         }
     }
 }
