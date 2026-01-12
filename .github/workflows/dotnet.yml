@@ -64,7 +64,7 @@ jobs:
         shell: powershell
         run: |
           Start-Sleep -Seconds 3
-          Invoke-WebRequest http://localhost -UseBasicParsing
+          Invoke-WebRequest http://localhost/swagger/index.html -UseBasicParsing
 
       - name: Deploy success
         run: echo "✅ MemoryRefresherService deployed successfully to IIS"
