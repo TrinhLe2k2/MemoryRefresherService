@@ -22,16 +22,16 @@ jobs:
 
       - name: Restore dependencies
         shell: powershell
-        run: dotnet restore ./MemoryRefresherService/Location.API/Location.API.csproj
+        run: dotnet restore ./Location.API/Location.API.csproj
 
       - name: Build application
         shell: powershell
-        run: dotnet build ./MemoryRefresherService/Location.API/Location.API.csproj -c Release --no-restore
+        run: dotnet build ./Location.API/Location.API.csproj -c Release --no-restore
 
       - name: Publish application
         shell: powershell
         run: |
-          dotnet publish ./MemoryRefresherService/Location.API/Location.API.csproj `
+          dotnet publish ./Location.API/Location.API.csproj `
             -c Release `
             -o C:\deploy\MemoryRefresherService
 
