@@ -91,12 +91,5 @@ namespace Location.API.Controllers
                 return BadRequest(ex.Message);
             }
         }
-
-        [HttpGet("get-weather")]
-        public IActionResult GetList()
-        {
-            var weather = new [] { "Sunny", "Cloudy", "Rainy", "Windy", "Stormy"};
-            return Ok(weather);
-        }
     }
 }
