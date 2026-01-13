@@ -78,15 +78,6 @@ jobs:
             Write-Host "AppPool not found: $env:APP_POOL_NAME (skip Stop-WebAppPool)"
           }
       
-      - name: Put app_offline.htm (avoid locked files)
-        shell: powershell
-        run: |
-          $dest = $env:IIS_PHYSICAL_PATH
-          if (!(Test-Path $dest)) { New-Item -ItemType Directory -Path $dest | Out-Null }
-
-          $offlineFile = Join-Path $dest "app_offline.htm"
-          "Deploying... please wait." | Out-File -FilePath $offlineFile -Encoding utf8
-      
       - name: Deploy files (clean + copy)
         shell: powershell
         run: |
@@ -102,12 +93,6 @@ jobs:
 
           Write-Host "Copying files from $source to $dest ..."
           Copy-Item -Path (Join-Path $source "*") -Destination $dest -Recurse -Force
-      
-      - name: Remove app_offline.htm
-        shell: powershell
-        run: |
-          $offlineFile = Join-Path $env:IIS_PHYSICAL_PATH "app_offline.htm"
-          if (Test-Path $offlineFile) { Remove-Item $offlineFile -Force }
 
       - name: Start IIS App Pool + Website
         shell: powershell
