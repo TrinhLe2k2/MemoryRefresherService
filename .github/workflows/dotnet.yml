@@ -1,16 +1,25 @@
-name: Deploy MemoryRefresherService to IIS (Self-hosted)
-
+name: Deloy to IIS
 on:
   push:
-    branches: [ master ]
+    branches: ["master", "develop"]
+  pull_request:
+    branches: ["master", "develop"]
+env:
+  # 1) Đường dẫn file .csproj của service cần deploy
+  PROJECT_PATH: ./Location.API/Location.API.csproj
+  # 2) Thư mục deploy thật trên IIS
+  IIS_PHYSICAL_PATH: C:\inetpub\wwwroot\MemoryRefresher\Service
+  # 3) Tên IIS Website và App Pool
+  SITE_NAME: MemoryRefresher
+  APP_POOL_NAME: MemoryRefresher
+  # 4) URL health-check
+  HEALTHCHECK_URL: http://localhost/swagger/index.html
 
 jobs:
-  deploy:
+  build:
     runs-on: self-hosted
-    timeout-minutes: 10
-
     steps:
-      - name: Checkout source code
+      - name: Checkout source code (to _work folder)
         uses: actions/checkout@v4
 
       - name: Show runner info
@@ -19,52 +28,125 @@ jobs:
           Write-Host "Running on:"
           hostname
           whoami
+          Write-Host "PWD =" (Get-Location).Path
+          Write-Host "GITHUB_WORKSPACE =" $env:GITHUB_WORKSPACE
 
       - name: Restore dependencies
         shell: powershell
-        run: dotnet restore ./Location.API/Location.API.csproj
+        run: dotnet restore $env:PROJECT_PATH
 
       - name: Build application
         shell: powershell
-        run: dotnet build ./Location.API/Location.API.csproj -c Release --no-restore
-
-      - name: Publish application
+        run: dotnet build $env:PROJECT_PATH -c Release --no-restore
+  
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - name: Publish application (to temp folder)
         shell: powershell
         run: |
-          dotnet publish ./Location.API/Location.API.csproj `
-            -c Release `
-            -o C:\deploy\MemoryRefresherService
+          $publishDir = Join-Path $env:RUNNER_TEMP "MemoryRefresherService_publish"
+          if (Test-Path $publishDir) { Remove-Item $publishDir -Recurse -Force }
+          New-Item -ItemType Directory -Path $publishDir | Out-Null
+          
+          dotnet publish $env:PROJECT_PATH `
+          -c Release `
+          -o $publishDir `
+          --no-build
 
-      - name: Stop IIS
+          Write-Host "Published to: $publishDir"
+          "PUBLISH_DIR=$publishDir" | Out-File -FilePath $env:GITHUB_ENV -Append
+      
+      - name: Ensure IIS PowerShell module available
         shell: powershell
         run: |
-          Write-Host "Stopping IIS..."
-          iisreset /stop
-
-      - name: Deploy to IIS folder
+          Import-Module WebAdministration
+      
+      - name: Stop IIS Website + App Pool (only this app)
         shell: powershell
         run: |
-          $source = "C:\deploy\MemoryRefresherService"
-          $destination = "C:\inetpub\wwwroot\MemoryRefresher\Service"
+          Import-Module WebAdministration
 
-          if (!(Test-Path $destination)) {
-            New-Item -ItemType Directory -Path $destination
+          if (Test-Path "IIS:\Sites\$env:SITE_NAME") {
+            Write-Host "Stopping website: $env:SITE_NAME"
+            Stop-Website -Name $env:SITE_NAME
+          } else {
+            Write-Host "Website not found: $env:SITE_NAME (skip Stop-Website)"
           }
 
-          Write-Host "Deploying files..."
-          Copy-Item "$source\*" $destination -Recurse -Force
-
-      - name: Start IIS
+          if (Test-Path "IIS:\AppPools\$env:APP_POOL_NAME") {
+            Write-Host "Stopping app pool: $env:APP_POOL_NAME"
+            Stop-WebAppPool -Name $env:APP_POOL_NAME
+          } else {
+            Write-Host "AppPool not found: $env:APP_POOL_NAME (skip Stop-WebAppPool)"
+          }
+      
+      - name: Put app_offline.htm (avoid locked files)
         shell: powershell
         run: |
-          Write-Host "Starting IIS..."
-          iisreset /start
+          $dest = $env:IIS_PHYSICAL_PATH
+          if (!(Test-Path $dest)) { New-Item -ItemType Directory -Path $dest | Out-Null }
 
+          $offlineFile = Join-Path $dest "app_offline.htm"
+          "Deploying... please wait." | Out-File -FilePath $offlineFile -Encoding utf8
+      
+      - name: Deploy files (clean + copy)
+        shell: powershell
+        run: |
+          $source = $env:PUBLISH_DIR
+          $dest   = $env:IIS_PHYSICAL_PATH
+
+          if (!(Test-Path $dest)) { New-Item -ItemType Directory -Path $dest | Out-Null }
+
+          # Dọn sạch thư mục đích nhưng giữ app_offline.htm để tiếp tục chặn request
+          Get-ChildItem -Path $dest -Force |
+            Where-Object { $_.Name -ne "app_offline.htm" } |
+            Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+
+          Write-Host "Copying files from $source to $dest ..."
+          Copy-Item -Path (Join-Path $source "*") -Destination $dest -Recurse -Force
+      
+      - name: Start IIS App Pool + Website
+        shell: powershell
+        run: |
+          Import-Module WebAdministration
+
+          if (Test-Path "IIS:\AppPools\$env:APP_POOL_NAME") {
+            Write-Host "Starting app pool: $env:APP_POOL_NAME"
+            Start-WebAppPool -Name $env:APP_POOL_NAME
+          }
+
+          if (Test-Path "IIS:\Sites\$env:SITE_NAME") {
+            Write-Host "Starting website: $env:SITE_NAME"
+            Start-Website -Name $env:SITE_NAME
+          }
       - name: Health check
         shell: powershell
         run: |
           Start-Sleep -Seconds 3
-          Invoke-WebRequest http://localhost/swagger/index.html -UseBasicParsing
+
+          # Retry 10 lần (mỗi lần cách nhau 3s) để tránh lúc app vừa start chưa kịp lên
+          $maxTries = 10
+          $ok = $false
+
+          for ($i=1; $i -le $maxTries; $i++) {
+            try {
+              Write-Host "Health check try $i/$maxTries: $env:HEALTHCHECK_URL"
+              $resp = Invoke-WebRequest $env:HEALTHCHECK_URL -UseBasicParsing -TimeoutSec 10
+              if ($resp.StatusCode -ge 200 -and $resp.StatusCode -lt 300) {
+                $ok = $true
+                break
+              }
+            } catch {
+              Start-Sleep -Seconds 3
+            }
+          }
+
+          if (-not $ok) {
+            throw "Health check failed after $maxTries tries: $env:HEALTHCHECK_URL"
+          }
+
 
       - name: Deploy success
+        shell: powershell
         run: echo "✅ MemoryRefresherService deployed successfully to IIS"
