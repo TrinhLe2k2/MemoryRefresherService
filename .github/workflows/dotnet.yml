@@ -2,18 +2,18 @@ name: Deloy to IIS
 on:
   push:
     branches: ["master", "develop"]
-  pull_request:
+  pull-request:
     branches: ["master", "develop"]
 env:
   # 1) Đường dẫn file .csproj của service cần deploy
-  PROJECT_PATH: ./Location.API/Location.API.csproj
+  PROJECT_PATH: ./MemoryRefresherService/MemoryRefresherService.csproj
   # 2) Thư mục deploy thật trên IIS
   IIS_PHYSICAL_PATH: C:\inetpub\wwwroot\MemoryRefresher\Service
   # 3) Tên IIS Website và App Pool
-  SITE_NAME: MemoryRefresher
-  APP_POOL_NAME: MemoryRefresher
+  SITE_NAME: MemoryRefresherService
+  APP_POOL_NAME: MemoryRefresherServicePool
   # 4) URL health-check
-  HEALTHCHECK_URL: http://localhost/swagger/index.html
+  HEALTHCHECK_URL: http://localhost/MemoryRefresher/Service/health
 
 jobs:
   build:
@@ -106,6 +106,12 @@ jobs:
           Write-Host "Copying files from $source to $dest ..."
           Copy-Item -Path (Join-Path $source "*") -Destination $dest -Recurse -Force
       
+      - name: Remove app_offline.htm
+        shell: powershell
+        run: |
+          $offlineFile = Join-Path $env:IIS_PHYSICAL_PATH "app_offline.htm"
+          if (Test-Path $offlineFile) { Remove-Item $offlineFile -Force }
+
       - name: Start IIS App Pool + Website
         shell: powershell
         run: |
@@ -131,7 +137,7 @@ jobs:
 
           for ($i=1; $i -le $maxTries; $i++) {
             try {
-              Write-Host "Health check try ${i}/${maxTries}: $env:HEALTHCHECK_URL"
+              Write-Host "Health check try $i/$maxTries: $env:HEALTHCHECK_URL"
               $resp = Invoke-WebRequest $env:HEALTHCHECK_URL -UseBasicParsing -TimeoutSec 10
               if ($resp.StatusCode -ge 200 -and $resp.StatusCode -lt 300) {
                 $ok = $true
@@ -145,7 +151,6 @@ jobs:
           if (-not $ok) {
             throw "Health check failed after $maxTries tries: $env:HEALTHCHECK_URL"
           }
-
 
       - name: Deploy success
         shell: powershell
