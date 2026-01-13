@@ -2,7 +2,7 @@ name: Deloy to IIS
 on:
   push:
     branches: ["master", "develop"]
-  pull-request:
+  pull_request:
     branches: ["master", "develop"]
 env:
   # 1) Đường dẫn file .csproj của service cần deploy
