@@ -131,7 +131,7 @@ jobs:
 
           for ($i=1; $i -le $maxTries; $i++) {
             try {
-              Write-Host "Health check try $i/$maxTries: $env:HEALTHCHECK_URL"
+              Write-Host "Health check try ${i}/${maxTries}: $env:HEALTHCHECK_URL"
               $resp = Invoke-WebRequest $env:HEALTHCHECK_URL -UseBasicParsing -TimeoutSec 10
               if ($resp.StatusCode -ge 200 -and $resp.StatusCode -lt 300) {
                 $ok = $true
