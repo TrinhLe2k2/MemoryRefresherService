@@ -13,9 +13,6 @@ namespace Location.Models
     {
         public string Name { get; set; } = string.Empty;
         public string Code { get; set; } = string.Empty;
-        [Required]
-        public AdministrativeStatus AdministrativeStatus { get; set; }
-
 
         public CreateProvince ToModel(string user) => new()
         {
