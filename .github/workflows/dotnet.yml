@@ -6,14 +6,14 @@ on:
     branches: ["master", "develop"]
 env:
   # 1) Đường dẫn file .csproj của service cần deploy
-  PROJECT_PATH: ./MemoryRefresherService/MemoryRefresherService.csproj
+  PROJECT_PATH: ./Location.API/Location.API.csproj
   # 2) Thư mục deploy thật trên IIS
   IIS_PHYSICAL_PATH: C:\inetpub\wwwroot\MemoryRefresher\Service
   # 3) Tên IIS Website và App Pool
-  SITE_NAME: MemoryRefresherService
-  APP_POOL_NAME: MemoryRefresherServicePool
+  SITE_NAME: MemoryRefresher
+  APP_POOL_NAME: MemoryRefresher
   # 4) URL health-check
-  HEALTHCHECK_URL: http://localhost/MemoryRefresher/Service/health
+  HEALTHCHECK_URL: http://localhost/swagger/index.html
 
 jobs:
   build:
