@@ -15,8 +15,7 @@ env:
   # 4) URL health-check
   HEALTHCHECK_URL: http://localhost/swagger/index.html
 
-jobs:
-  build:
+  deploy:
     runs-on: self-hosted
     steps:
       - name: Checkout source code (to _work folder)
@@ -38,10 +37,7 @@ jobs:
       - name: Build application
         shell: powershell
         run: dotnet build $env:PROJECT_PATH -c Release --no-restore
-  
-  deploy:
-    runs-on: self-hosted
-    steps:
+
       - name: Publish application (to temp folder)
         shell: powershell
         run: |
