@@ -15,6 +15,7 @@ env:
   # 4) URL health-check
   HEALTHCHECK_URL: http://localhost/swagger/index.html
 
+jobs:
   deploy:
     runs-on: self-hosted
     steps:
