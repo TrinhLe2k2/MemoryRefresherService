@@ -1,4 +1,5 @@
-using Location.Infrastructures;
+﻿using Location.Infrastructures;
+using Location.Infrastructures.Redis;
 using Location.Repositories.Implements;
 using Location.Repositories.Interfaces;
 using Location.Services.Implements;
@@ -17,6 +18,20 @@ builder.Services.AddSwaggerGen();
 var connection_string = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Missing DefaultConnection");
 
 builder.Services.AddSingleton<IDbConnectionFactory>(_ => new SqlConnectionFactory(connection_string));
+
+
+builder.Services.AddDistributedMemoryCache(); // In-Memory cache, restart app → mất cache
+//builder.Services.AddStackExchangeRedisCache(options => // Redis cache Distributed ON CLOUD
+//{
+//    options.Configuration = builder.Configuration.GetConnectionString("Redis");
+//});
+builder.Services.AddSingleton<IRedisCacheUsingDistributed, RedisCacheUsingDistributed>();
+
+
+builder.Services.AddSingleton<IRedisConnectionFactory>(_ =>
+    new RedisConnectionFactory(builder.Configuration.GetConnectionString("Redis")!) // Redis cache CLOUD
+);
+builder.Services.AddSingleton<IRedisCacheUsingMultiplexer, RedisCacheUsingMultiplexer>(); 
 
 
 builder.Services.AddScoped<IProvinceRepository, ProvinceRepository>();
