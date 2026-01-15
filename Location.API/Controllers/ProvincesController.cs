@@ -1,7 +1,10 @@
-﻿using Location.Models;
+﻿using Location.Infrastructures.Redis;
+using Location.Models;
 using Location.Services.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Distributed;
+using static Microsoft.Extensions.Logging.EventSource.LoggingEventSource;
 
 namespace Location.API.Controllers
 {
@@ -10,10 +13,16 @@ namespace Location.API.Controllers
     public class ProvincesController : ControllerBase
     {
         private readonly IProvinceService _provinceService;
+        private readonly IRedisCacheUsingMultiplexer _cache;
+        private readonly ILogger _logger;
+        private readonly IRedisCacheUsingDistributed _redisCacheInMemory;
 
-        public ProvincesController(IProvinceService provinceService)
+        public ProvincesController(IProvinceService provinceService, IRedisCacheUsingMultiplexer cache, ILogger<ProvincesController> logger, IRedisCacheUsingDistributed redisCacheInMemory)
         {
             _provinceService = provinceService;
+            _cache = cache;
+            _logger = logger;
+            _redisCacheInMemory = redisCacheInMemory;
         }
 
         [HttpPost]
@@ -65,11 +74,17 @@ namespace Location.API.Controllers
         {
             try
             {
+                var key = $"province:{id}";
+                var cached = await _redisCacheInMemory.GetAsync<DetailProvince>(key);
+                if (cached != null) return Ok(cached);
+
                 var result = await _provinceService.GetProvince(id);
                 if (result == null)
                 {
                     return NotFound();
                 }
+                await _redisCacheInMemory.SetAsync(key, result, TimeSpan.FromMinutes(3));
+
                 return Ok(result);
             }
             catch (Exception ex)
@@ -83,7 +98,13 @@ namespace Location.API.Controllers
         {
             try
             {
+                var key = $"provinces:{keyword}";
+
+                var cached = await _cache.GetAsync<IEnumerable<DetailProvince>>(key);
+                if (cached != null) return Ok(cached);
+
                 var result = await _provinceService.GetProvinces(keyword);
+                await _cache.SetAsync(key, result, TimeSpan.FromMinutes(3));
                 return Ok(result);
             }
             catch (Exception ex)
