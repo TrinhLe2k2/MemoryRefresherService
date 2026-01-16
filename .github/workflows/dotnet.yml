@@ -88,7 +88,7 @@ jobs:
 
           # Dọn sạch thư mục đích nhưng giữ app_offline.htm để tiếp tục chặn request
           Get-ChildItem -Path $dest -Force |
-            Where-Object { $_.Name -ne "app_offline.htm" } |
+            # Where-Object { $_.Name -ne "app_offline.htm" } |
             Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
 
           Write-Host "Copying files from $source to $dest ..."
