@@ -95,6 +95,8 @@ jobs:
           } else {
             Write-Host "AppPool not found: $env:APP_POOL_NAME (skip Stop-WebAppPool)"
           }
+          # Đảm bảo IIS đã hoàn toàn dừng (chờ vài giây)
+          Start-Sleep -Seconds 5
       
       - name: Deploy files
         shell: powershell
@@ -103,9 +105,8 @@ jobs:
           $dest   = $env:IIS_PHYSICAL_PATH
 
           if (!(Test-Path $dest)) { New-Item -ItemType Directory -Path $dest | Out-Null }
-          Get-Process | Where-Object { $_.Path -eq "C:\inetpub\wwwroot\MemoryRefresher\Service\Location.API.dll" } |
-          Get-ChildItem -Path $dest -Force |
-            Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+
+          Get-ChildItem -Path $dest -Force | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
 
           Write-Host "Copying files from $source to $dest ..."
           Copy-Item -Path (Join-Path $source "*") -Destination $dest -Recurse -Force
