@@ -64,16 +64,34 @@ jobs:
         run: |
           Import-Module WebAdministration
 
+          # Kiểm tra nếu website tồn tại
           if (Test-Path "IIS:\Sites\$env:SITE_NAME") {
             Write-Host "Stopping website: $env:SITE_NAME"
-            Stop-Website -Name $env:SITE_NAME
+            
+            # Kiểm tra trạng thái website trước khi dừng
+            $website = Get-Website -Name $env:SITE_NAME
+            if ($website.State -eq "Started") {
+              Stop-Website -Name $env:SITE_NAME
+              Write-Host "Website $env:SITE_NAME has been stopped."
+            } else {
+              Write-Host "Website $env:SITE_NAME is already stopped."
+            }
           } else {
             Write-Host "Website not found: $env:SITE_NAME (skip Stop-Website)"
           }
 
+          # Kiểm tra nếu app pool tồn tại
           if (Test-Path "IIS:\AppPools\$env:APP_POOL_NAME") {
             Write-Host "Stopping app pool: $env:APP_POOL_NAME"
-            Stop-WebAppPool -Name $env:APP_POOL_NAME
+            
+            # Kiểm tra trạng thái app pool trước khi dừng
+            $appPool = Get-WebAppPoolState -Name $env:APP_POOL_NAME
+            if ($appPool.Value -eq "Started") {
+              Stop-WebAppPool -Name $env:APP_POOL_NAME
+              Write-Host "App pool $env:APP_POOL_NAME has been stopped."
+            } else {
+              Write-Host "App pool $env:APP_POOL_NAME is already stopped."
+            }
           } else {
             Write-Host "AppPool not found: $env:APP_POOL_NAME (skip Stop-WebAppPool)"
           }
