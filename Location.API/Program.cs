@@ -1,14 +1,31 @@
-﻿using Location.Infrastructures;
+﻿using Elastic.Clients.Elasticsearch;
+using Elastic.Transport;
+using Location.Infrastructures;
+using Location.Infrastructures.Elasticsearch;
 using Location.Infrastructures.Redis;
 using Location.Repositories.Implements;
 using Location.Repositories.Interfaces;
 using Location.Services.Implements;
 using Location.Services.Interfaces;
-using Microsoft.AspNetCore.Connections;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+
+var esUrl = builder.Configuration["Elasticsearch:Url"]!;
+var username = builder.Configuration["Elasticsearch:Username"]!;
+var password = builder.Configuration["Elasticsearch:Password"]!;
+var fingerprint = "6f9b17ee6ce321b0608b95d0b5fd64ccbb40fcc4ac56bc2260ba7d4fae513e29";
+
+var esSettings = new ElasticsearchClientSettings(new Uri(esUrl))
+    .Authentication(new BasicAuthentication(username, password))
+    .CertificateFingerprint(fingerprint)
+    .DisableDirectStreaming(); // để debug
+
+var esClient = new ElasticsearchClient(esSettings);
+builder.Services.AddSingleton(esClient);
+builder.Services.AddScoped(typeof(IElasticsearchService<>), typeof(ElasticsearchService<>));
+
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle

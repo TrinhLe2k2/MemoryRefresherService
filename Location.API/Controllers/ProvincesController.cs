@@ -1,4 +1,5 @@
-﻿using Location.Infrastructures.Redis;
+﻿using Location.Infrastructures.Elasticsearch;
+using Location.Infrastructures.Redis;
 using Location.Models;
 using Location.Services.Interfaces;
 using Microsoft.AspNetCore.Http;
@@ -14,15 +15,15 @@ namespace Location.API.Controllers
     {
         private readonly IProvinceService _provinceService;
         private readonly IRedisCacheUsingMultiplexer _cache;
-        private readonly ILogger _logger;
         private readonly IRedisCacheUsingDistributed _redisCacheInMemory;
+        private readonly IElasticsearchService<DetailProvince> _elasticsearchService;
 
-        public ProvincesController(IProvinceService provinceService, IRedisCacheUsingMultiplexer cache, ILogger<ProvincesController> logger, IRedisCacheUsingDistributed redisCacheInMemory)
+        public ProvincesController(IProvinceService provinceService, IRedisCacheUsingMultiplexer cache, IRedisCacheUsingDistributed redisCacheInMemory, IElasticsearchService<DetailProvince> elasticsearchService)
         {
             _provinceService = provinceService;
             _cache = cache;
-            _logger = logger;
             _redisCacheInMemory = redisCacheInMemory;
+            _elasticsearchService = elasticsearchService;
         }
 
         [HttpPost]
@@ -32,6 +33,17 @@ namespace Location.API.Controllers
             {
                 var model = req.ToModel("system");
                 var result = await _provinceService.CreateProvince(model);
+                if (result < 0)
+                {
+                    return BadRequest("Create province failed");
+                }
+                var detail = await _provinceService.GetProvince(result);
+                if (detail is null)
+                {
+                    return NotFound();
+                }
+                var esResult = await _elasticsearchService.CreateDocumentAsync(detail);
+
                 return Ok(result);
             }
             catch (Exception ex)
@@ -78,12 +90,21 @@ namespace Location.API.Controllers
                 var cached = await _redisCacheInMemory.GetAsync<DetailProvince>(key);
                 if (cached != null) return Ok(cached);
 
+                var esGetByIdResult = await _elasticsearchService.GetDocumentByIdAsync(id.ToString());
+                if (esGetByIdResult is not null)
+                {
+                    await _redisCacheInMemory.SetAsync(key, esGetByIdResult, TimeSpan.FromMinutes(3));
+                    return Ok(esGetByIdResult);
+                }
+
                 var result = await _provinceService.GetProvince(id);
-                if (result == null)
+                if (result is null)
                 {
                     return NotFound();
                 }
                 await _redisCacheInMemory.SetAsync(key, result, TimeSpan.FromMinutes(3));
+
+                var esCreateResult = await _elasticsearchService.CreateDocumentAsync(result);
 
                 return Ok(result);
             }
@@ -103,8 +124,16 @@ namespace Location.API.Controllers
                 var cached = await _cache.GetAsync<IEnumerable<DetailProvince>>(key);
                 if (cached != null) return Ok(cached);
 
+                var esGetallResult = await _elasticsearchService.GetAllDocumentsAsync();
+                if (esGetallResult.Any())
+                {
+                    await _cache.SetAsync(key, esGetallResult, TimeSpan.FromMinutes(3));
+                    return Ok(esGetallResult);
+                }
+
                 var result = await _provinceService.GetProvinces(keyword);
                 await _cache.SetAsync(key, result, TimeSpan.FromMinutes(3));
+                var multiEsCreateResult = await _elasticsearchService.CreateDocumentsAsync(result);
                 return Ok(result);
             }
             catch (Exception ex)
