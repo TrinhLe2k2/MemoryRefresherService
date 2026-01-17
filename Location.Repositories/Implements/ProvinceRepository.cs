@@ -19,7 +19,7 @@ namespace Location.Repositories.Implements
         {
             try
             {
-                var result = await base.ExecuteAsync("SP_Provinces_Create", new
+                var result = await base.QueryFirstOrDefaultAsync<int>("SP_Provinces_Create", new
                 {
                     @Code = model.Code,
                     @Name = model.Name,

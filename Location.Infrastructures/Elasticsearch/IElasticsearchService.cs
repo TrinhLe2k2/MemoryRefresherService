@@ -13,6 +13,6 @@ namespace Location.Infrastructures.Elasticsearch
         Task<T?> GetDocumentByIdAsync(string id);
         Task<bool> UpdateDocumentAsync(string id, T document);
         Task<bool> DeleteDocumentAsync(string id);
-        Task<IEnumerable<T>> GetAllDocumentsAsync();
+        Task<IEnumerable<T>> GetAllDocumentsAsync(string? keyword);
     }
 }
