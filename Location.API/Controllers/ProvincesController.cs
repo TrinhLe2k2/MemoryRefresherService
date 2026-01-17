@@ -33,17 +33,11 @@ namespace Location.API.Controllers
             {
                 var model = req.ToModel("system");
                 var result = await _provinceService.CreateProvince(model);
-                if (result < 0)
+                if (result < 1)
                 {
                     return BadRequest("Create province failed");
                 }
-                var detail = await _provinceService.GetProvince(result);
-                if (detail is null)
-                {
-                    return NotFound();
-                }
-                var esResult = await _elasticsearchService.CreateDocumentAsync(detail);
-
+                
                 return Ok(result);
             }
             catch (Exception ex)
@@ -59,6 +53,10 @@ namespace Location.API.Controllers
             {
                 var model = req.ToModel("system");
                 var result = await _provinceService.UpdateProvince(model);
+                if (result < 1)
+                {
+                    return BadRequest("Update province failed");
+                }
                 return Ok(result);
             }
             catch (Exception ex)
@@ -73,6 +71,10 @@ namespace Location.API.Controllers
             try
             {
                 var result = await _provinceService.DeleteProvince(id);
+                if (result < 1)
+                {
+                    return BadRequest("Delete province failed");
+                }
                 return Ok(result);
             }
             catch (Exception ex)
@@ -86,26 +88,11 @@ namespace Location.API.Controllers
         {
             try
             {
-                var key = $"province:{id}";
-                var cached = await _redisCacheInMemory.GetAsync<DetailProvince>(key);
-                if (cached != null) return Ok(cached);
-
-                var esGetByIdResult = await _elasticsearchService.GetDocumentByIdAsync(id.ToString());
-                if (esGetByIdResult is not null)
-                {
-                    await _redisCacheInMemory.SetAsync(key, esGetByIdResult, TimeSpan.FromMinutes(3));
-                    return Ok(esGetByIdResult);
-                }
-
                 var result = await _provinceService.GetProvince(id);
                 if (result is null)
                 {
-                    return NotFound();
+                    return NotFound("Province not found");
                 }
-                await _redisCacheInMemory.SetAsync(key, result, TimeSpan.FromMinutes(3));
-
-                var esCreateResult = await _elasticsearchService.CreateDocumentAsync(result);
-
                 return Ok(result);
             }
             catch (Exception ex)
@@ -119,21 +106,11 @@ namespace Location.API.Controllers
         {
             try
             {
-                var key = $"provinces:{keyword}";
-
-                var cached = await _cache.GetAsync<IEnumerable<DetailProvince>>(key);
-                if (cached != null) return Ok(cached);
-
-                var esGetallResult = await _elasticsearchService.GetAllDocumentsAsync();
-                if (esGetallResult.Any())
-                {
-                    await _cache.SetAsync(key, esGetallResult, TimeSpan.FromMinutes(3));
-                    return Ok(esGetallResult);
-                }
-
                 var result = await _provinceService.GetProvinces(keyword);
-                await _cache.SetAsync(key, result, TimeSpan.FromMinutes(3));
-                var multiEsCreateResult = await _elasticsearchService.CreateDocumentsAsync(result);
+                if (!result.Any())
+                {
+                    return NotFound("No provinces found");
+                }
                 return Ok(result);
             }
             catch (Exception ex)
