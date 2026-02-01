@@ -6,5 +6,6 @@
     <Project Path="Location.Models/Location.Models.csproj" />
     <Project Path="Location.Repositories/Location.Repositories.csproj" />
     <Project Path="Location.Services/Location.Services.csproj" />
+    <Project Path="Location.Tests/Location.Tests.csproj" Id="98794edd-887f-428b-9f46-1dd4ca59b6dc" />
   </Folder>
 </Solution>
